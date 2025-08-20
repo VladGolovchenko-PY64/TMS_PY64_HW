@@ -15,6 +15,16 @@
 # o find_most_expensive() — вернуть самый дорогой товар.
 # o find_cheapest() — вернуть самый дешёвый товар.
 
+class OutOfStockError(Exception):
+    """Ошибка: недостаточно товара на складе"""
+    pass
+
+
+class ProductNotFoundError(Exception):
+    """Ошибка: товар не найден"""
+    pass
+
+
 class Store:
     def __init__(self, name):
         self.name = name
@@ -31,7 +41,7 @@ class Store:
             if product["name"] == name:
                 product["price"] = new_price
                 return True
-        return False
+        raise ProductNotFoundError(f"Товар '{name}' не найден для изменения цены.")
 
     def sell_product(self, name, quantity):
         for product in self.products:
@@ -40,10 +50,11 @@ class Store:
                     product["quantity"] -= quantity
                     return True
                 else:
-                    print("Недостаточно товара на складе.")
-                    return False
-        print("Товар не найден.")
-        return False
+                    raise OutOfStockError(
+                        f"Недостаточно товара '{name}' на складе. "
+                        f"Остаток: {product['quantity']}, требуется: {quantity}"
+                    )
+        raise ProductNotFoundError(f"Товар '{name}' не найден для продажи.")
 
     def get_inventory(self):
         return [(p["name"], p["price"], p["quantity"]) for p in self.products]
@@ -55,16 +66,32 @@ class Store:
         return min(self.products, key=lambda p: p["price"], default=None)
 
 
+
 store = Store("Магазин")
 
 store.add_product("Яблоки", 100, 5)
-store.add_product("Бананы", 50, 10)
-store.add_product("Груши", 120, 3)
+store.add_product("Бананы", 200, 10)
+store.add_product("Груши", 300, 15)
 
 print("Инвентарь:", store.get_inventory())
 
-store.update_price("Бананы", 60)
-store.sell_product("Яблоки", 2)
+
+try:
+    store.update_price("Бананы", 60)
+except ProductNotFoundError as e:
+    print("Ошибка:", e)
+
+
+try:
+    store.sell_product("Яблоки", 10)
+except (OutOfStockError, ProductNotFoundError) as e:
+    print("Ошибка:", e)
+
+
+try:
+    store.sell_product("Апельсины", 2)
+except (OutOfStockError, ProductNotFoundError) as e:
+    print("Ошибка:", e)
 
 print("Самый дорогой:", store.find_most_expensive())
 print("Самый дешёвый:", store.find_cheapest())
